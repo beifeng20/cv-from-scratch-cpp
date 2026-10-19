@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: release
+            flags: -DCMAKE_BUILD_TYPE=Release
+          - name: asan-ubsan
+            flags: -DCMAKE_BUILD_TYPE=Debug -DCVFS_SANITIZE=ON
+    name: ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build ${{ matrix.flags }}
+      - name: Build
+        run: cmake --build build -j
+      - name: Unit tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Demo on a road frame
+        run: mkdir -p out && ./build/cvfs_demo data/road.ppm out
+      - name: Compare with OpenCV
+        if: matrix.name == 'release'
+        run: |
+          pip install opencv-python-headless numpy
+          mkdir -p out_full && ./build/cvfs_demo data/road.ppm out_full --roi 0
+          python tools/compare_opencv.py data/road.ppm out_full/4_edges.pgm

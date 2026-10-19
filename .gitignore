@@ -1,0 +1,6 @@
+build/
+build-*/
+out/
+out_full/
+*.exe
+*.pdb
